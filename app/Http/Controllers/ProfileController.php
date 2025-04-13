@@ -70,7 +70,6 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        try {
             $request->validate([
                 'password' => ['required', 'current_password'],
             ]);
@@ -85,9 +84,5 @@ class ProfileController extends Controller
             $request->session()->regenerateToken();
 
             return Redirect::to('/');
-        } catch (ValidationException $e) {
-            return Redirect::route('profile.edit')
-                ->with('error', 'Mot de passe incorrect. Suppression du compte annulée.');
-        }
     }
 }
