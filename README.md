@@ -2,6 +2,8 @@
 
 # TolDoList
 
+[![Laravel/Vue.js CI/CD](https://github.com/tolgadev75/toldolist/actions/workflows/laravel.yml/badge.svg)](https://github.com/tolgadev75/toldolist/actions/workflows/laravel.yml)
+
 Une application de création et gestion de tâches développée avec Laravel et Vue.js
 
 <p align="center">
