@@ -3,7 +3,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="py-12 md:py-20 text-center">
-        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Organisez votre vie avec TodoList</h1>
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Organisez votre vie avec ToLDoList</h1>
         <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
             Une application simple et intuitive pour gérer vos tâches quotidiennes et rester productif.
         </p>
@@ -62,7 +62,7 @@
             <div class="bg-white p-6 rounded-lg shadow-sm">
                 <div class="text-3xl font-bold text-blue-600 mb-4">1</div>
                 <h3 class="text-xl font-medium mb-2">Créez votre compte</h3>
-                <p class="text-gray-600">Inscrivez-vous gratuitement pour commencer à utiliser TodoList.</p>
+                <p class="text-gray-600">Inscrivez-vous gratuitement pour commencer à utiliser ToLDoList.</p>
             </div>
             <div class="bg-white p-6 rounded-lg shadow-sm">
                 <div class="text-3xl font-bold text-blue-600 mb-4">2</div>

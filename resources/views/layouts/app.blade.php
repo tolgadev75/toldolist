@@ -16,7 +16,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
-                        <a href="/" class="font-bold text-xl text-blue-600">TodoList</a>
+                        <a href="/" class="font-bold text-xl text-blue-600">ToLDoList</a>
                     </div>
                     <div class="ml-10 flex items-center space-x-4">
                         <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Accueil</a>
