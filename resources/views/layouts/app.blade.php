@@ -10,7 +10,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen flex flex-col">
     <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -22,7 +22,6 @@
                         <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Accueil</a>
                         @auth
                         <a href="{{ route('todos') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Mes Tâches</a>
-                        <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Dashboard</a>
                         @endauth
                     </div>
                 </div>
@@ -54,11 +53,11 @@
         </div>
     </nav>
 
-    <main class="py-4">
+    <main class="py-4 flex-grow">
         @yield('content')
     </main>
 
-    <footer class="bg-white shadow-inner mt-8 py-4">
+    <footer class="bg-white shadow-inner py-4 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <p class="text-center text-gray-500 text-sm">
                 &copy; {{ date('Y') }} TodoList App - Tous droits réservés
