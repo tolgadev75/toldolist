@@ -1,5 +1,7 @@
 <template>
     <div class="w-full">
+      <TodoViewSelector v-model="currentView" @update:view="setView" />
+
       <!-- Filtres et recherche -->
       <TodoFilter
         v-model:search="searchQuery"
@@ -13,8 +15,10 @@
 
       <!-- Formulaire d'ajout -->
       <TodoForm
+        ref="todoForm"
         :new-todo="newTodo"
         @add-todo="addTodo"
+        class="todo-form"
       />
 
       <!-- État de chargement -->
@@ -22,30 +26,42 @@
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
 
-      <!-- Message si aucune tâche -->
-      <div v-else-if="filteredTodos.length === 0" class="bg-white rounded-xl shadow-sm p-8 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
+      <div v-else>
+        <div v-if="currentView === 'calendar' || alwaysShowCalendar">
+          <TodoCalendar
+            :todos="todos"
+            :key="calendarRefreshKey"
+            @toggle-complete="toggleComplete"
+            @edit-todo="editTodo"
+            @delete-todo="deleteTodo"
+            @create-todo-modal="openCreateTodoModal"
+          />
         </div>
-        <h3 class="text-lg font-medium text-gray-800 mb-1">Aucune tâche trouvée</h3>
-        <p class="text-gray-500">
-          {{ getEmptyStateMessage() }}
-        </p>
+
+        <template v-if="currentView === 'list'">
+          <div v-if="filteredTodos.length === 0" class="bg-white rounded-xl shadow-sm p-8 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-800 mb-1">Aucune tâche trouvée</h3>
+            <p class="text-gray-500">
+              {{ getEmptyStateMessage() }}
+            </p>
+          </div>
+
+          <TodoList
+            v-else
+            :todos="filteredTodos"
+            :filter-status="filterStatus"
+            @toggle-complete="toggleComplete"
+            @edit-todo="editTodo"
+            @delete-todo="deleteTodo"
+          />
+        </template>
       </div>
 
-      <!-- Liste des tâches -->
-      <TodoList
-        v-else
-        :todos="filteredTodos"
-        :filter-status="filterStatus"
-        @toggle-complete="toggleComplete"
-        @edit-todo="editTodo"
-        @delete-todo="deleteTodo"
-      />
-
-      <!-- Modal d'édition -->
       <TodoEditModal
         v-if="editingTodo"
         :todo="editingTodo"
@@ -57,11 +73,21 @@
         v-if="todoToDelete"
         :todo="todoToDelete"
         @confirm="confirmDelete"
-        @cancel="todoToDelete = null"
+        @cancel="cancelDelete"
+    />
+
+    <CreateTodoModal
+      v-if="showCreateTodoModal && selectedDate"
+      :date="selectedDate"
+      @save="saveNewTodoFromModal"
+      @cancel="closeCreateTodoModal"
     />
   </template>
 
 <script>
+import { defineAsyncComponent } from 'vue';
+import './todo-app.css';
+
 import DeleteConfirmModal from './shared/DeleteConfirmModal.vue';
 import TodoFilter from './todos/TodoFilter.vue';
 import TodoForm from './todos/TodoForm.vue';
@@ -69,6 +95,8 @@ import TodoList from './todos/TodoList.vue';
 import TodoEditModal from './todos/TodoEditModal.vue';
 import AlertError from './shared/AlertError.vue';
 import AlertSuccess from './shared/AlertSuccess.vue';
+import TodoCalendar from './todos/TodoCalendar.vue';
+import TodoViewSelector from './todos/TodoViewSelector.vue';
 
 export default {
   components: {
@@ -78,11 +106,13 @@ export default {
     TodoEditModal,
     AlertError,
     AlertSuccess,
-    DeleteConfirmModal
-  },
+    DeleteConfirmModal,
+    TodoCalendar,
+    TodoViewSelector,
+    CreateTodoModal: defineAsyncComponent(() => import('./todos/CreateTodoModal.vue'))
+},
 
   data() {
-    // Initialiser la date du jour pour les nouvelles tâches
     const today = new Date();
     const formattedToday = this.formatDateForInput(today);
 
@@ -101,20 +131,23 @@ export default {
       editingTodo: null,
       searchQuery: '',
       filterStatus: 'all',
-      todoToDelete: null
+      todoToDelete: null,
+      currentView: 'list',
+      alwaysShowCalendar: true,
+      showCreateTodoModal: false,
+      selectedDate: null,
+      calendarRefreshKey: 0
     }
   },
 
   computed: {
     filteredTodos() {
       return this.todos.filter(todo => {
-        // Filtre par statut
         if (this.filterStatus === 'active' && todo.completed) return false;
         if (this.filterStatus === 'completed' && !todo.completed) return false;
         if (this.filterStatus === 'due-today' && !this.isDueToday(todo.due_date)) return false;
         if (this.filterStatus === 'overdue' && !this.isOverdue(todo.due_date)) return false;
 
-        // Filtre par recherche
         if (this.searchQuery) {
           const query = this.searchQuery.toLowerCase();
           return todo.title.toLowerCase().includes(query) ||
@@ -131,6 +164,29 @@ export default {
   },
 
   methods: {
+    setView(view) {
+      this.currentView = view;
+    },
+
+    refreshCalendar() {
+      this.calendarRefreshKey++;
+    },
+
+    openCreateTodoModal(dateString) {
+      this.selectedDate = dateString;
+      this.showCreateTodoModal = true;
+    },
+
+    closeCreateTodoModal() {
+      this.showCreateTodoModal = false;
+      this.selectedDate = null;
+    },
+
+    async saveNewTodoFromModal(newTodo) {
+      await this.addTodo(newTodo);
+      this.closeCreateTodoModal();
+    },
+
     formatDateForInput(date) {
       if (!date) return null;
 
@@ -195,9 +251,11 @@ export default {
         }
 
         const todo = await response.json();
-        this.todos.unshift(todo);
 
-        // Réinitialiser le formulaire mais garder la date du jour par défaut
+        this.todos = [todo, ...this.todos];
+
+        this.refreshCalendar();
+
         const today = new Date();
         this.newTodo = {
           title: '',
@@ -217,6 +275,23 @@ export default {
     async toggleComplete(todo) {
       try {
         this.error = null;
+
+        const todoToUpdate = { ...todo };
+        const newCompleted = !todo.completed;
+
+        const index = this.todos.findIndex(t => t.id === todo.id);
+        if (index !== -1) {
+          const updatedTodo = { ...this.todos[index], completed: newCompleted };
+
+          this.todos = [
+            ...this.todos.slice(0, index),
+            updatedTodo,
+            ...this.todos.slice(index + 1)
+          ];
+        }
+
+        this.refreshCalendar();
+
         const response = await fetch(`/api/todos/${todo.id}`, {
           method: 'PUT',
           headers: {
@@ -224,7 +299,7 @@ export default {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
           },
           body: JSON.stringify({
-            completed: !todo.completed
+            completed: newCompleted
           })
         });
 
@@ -232,30 +307,32 @@ export default {
           throw new Error(`Erreur ${response.status}: ${response.statusText}`);
         }
 
-        const updatedTodo = await response.json();
-        // Mettre à jour la tâche dans la liste
-        const index = this.todos.findIndex(t => t.id === updatedTodo.id);
-        if (index !== -1) {
-          this.todos[index] = updatedTodo;
+        const updatedTodoFromServer = await response.json();
+
+        const finalIndex = this.todos.findIndex(t => t.id === updatedTodoFromServer.id);
+        if (finalIndex !== -1) {
+          this.todos = [
+            ...this.todos.slice(0, finalIndex),
+            updatedTodoFromServer,
+            ...this.todos.slice(finalIndex + 1)
+          ];
         }
 
-        this.showSuccess(updatedTodo.completed ? 'Tâche marquée comme terminée' : 'Tâche marquée comme en cours');
+        this.showSuccess(updatedTodoFromServer.completed ? 'Tâche marquée comme terminée' : 'Tâche marquée comme en cours');
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la tâche:', error);
         this.error = `Impossible de mettre à jour la tâche: ${error.message}`;
+        this.fetchTodos();
       }
     },
 
     editTodo(todo) {
-      // Créer une copie pour l'édition
       const todoForEdit = JSON.parse(JSON.stringify(todo));
 
-      // Formater la date d'échéance pour le champ input type="date"
       if (todoForEdit.due_date) {
         todoForEdit.due_date = this.formatDateForInput(new Date(todoForEdit.due_date));
       }
 
-      // Formater la date de rappel pour le champ input type="datetime-local"
       if (todoForEdit.reminder_at) {
         todoForEdit.reminder_at = this.formatDateTimeForInput(new Date(todoForEdit.reminder_at));
       }
@@ -270,6 +347,8 @@ export default {
     async saveEdit(updatedTodo) {
       try {
         this.error = null;
+
+        // N'appliquer le changement qu'APRÈS confirmation du modal
         const response = await fetch(`/api/todos/${updatedTodo.id}`, {
           method: 'PUT',
           headers: {
@@ -291,56 +370,68 @@ export default {
 
         const todoFromServer = await response.json();
 
-        // Mettre à jour l'objet dans le tableau
+        // Mettre à jour APRÈS confirmation du serveur
         const index = this.todos.findIndex(t => t.id === todoFromServer.id);
         if (index !== -1) {
-          this.todos[index] = todoFromServer;
+          this.todos = [
+            ...this.todos.slice(0, index),
+            todoFromServer,
+            ...this.todos.slice(index + 1)
+          ];
         }
+
+        // Rafraîchir le calendrier après la modification
+        this.refreshCalendar();
 
         this.editingTodo = null;
         this.showSuccess('Tâche mise à jour avec succès');
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la tâche:', error);
         this.error = `Impossible de mettre à jour la tâche: ${error.message}`;
+        // En cas d'erreur, recharger les todos
+        this.fetchTodos();
       }
     },
 
-    // Nouvelle méthode de suppression qui ouvre le modal
+    // Méthode de suppression qui ouvre le modal SANS supprimer la tâche
     deleteTodo(todo) {
       this.todoToDelete = todo;
     },
 
-    // Nouvelle méthode pour annuler la suppression
+    // Méthode pour annuler la suppression
     cancelDelete() {
       this.todoToDelete = null;
     },
 
-    // Nouvelle méthode pour confirmer la suppression
+    // Méthode pour confirmer la suppression - ne supprimer qu'APRÈS confirmation
     async confirmDelete() {
-      try {
+    try {
         this.error = null;
-        const response = await fetch(`/api/todos/${this.todoToDelete.id}`, {
-          method: 'DELETE',
-          headers: {
+        const todoId = this.todoToDelete.id;
+
+        const response = await fetch(`/api/todos/${todoId}`, {
+        method: 'DELETE',
+        headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-          }
+        }
         });
 
         if (!response.ok) {
-          throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
         }
 
-        const index = this.todos.findIndex(t => t.id === this.todoToDelete.id);
-        if (index !== -1) {
-          this.todos.splice(index, 1);
-        }
+        this.todos = this.todos.filter(t => t.id !== todoId);
+
+        // Rafraîchir le calendrier après la suppression
+        this.refreshCalendar();
 
         this.showSuccess('Tâche supprimée avec succès');
         this.todoToDelete = null;
-      } catch (error) {
+    } catch (error) {
         console.error('Erreur lors de la suppression de la tâche:', error);
         this.error = `Impossible de supprimer la tâche: ${error.message}`;
-      }
+        this.fetchTodos();
+    }
     },
 
     isOverdue(dateString) {
@@ -349,7 +440,6 @@ export default {
       const dueDate = new Date(dateString);
       const today = new Date();
 
-      // Comparer uniquement les dates sans les heures
       const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
       const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
