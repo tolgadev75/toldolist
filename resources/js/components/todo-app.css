@@ -1,0 +1,29 @@
+.todo-form {
+    scroll-margin-top: 20px;
+  }
+
+  .calendar-wrapper {
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .custom-calendar {
+    --day-border: 1px solid #eaeaea;
+    --day-border-highlight: 1px solid #ccc;
+    --day-width: calc((100% - 28px) / 7);
+    --day-height: 60px;
+    --day-margin: 1px;
+    --day-content-transition-time: 0.13s ease-in;
+    --day-content-z-index: 1;
+  }
+
+  @media (max-width: 640px) {
+    .custom-calendar {
+      --day-height: 45px;
+    }
+  }
+
+  .day-tasks {
+    max-height: 300px;
+    overflow-y: auto;
+  }
