@@ -7,9 +7,6 @@
         <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
             Une application simple et intuitive pour gérer vos tâches quotidiennes et rester productif.
         </p>
-        <p class="text-xl text-blue-600 max-w-3xl mx-auto mb-8">
-            Note : Cette application est en cours de développement, il sera amélioré pour une meilleure expérience utilisateur et plus de fonctionnalités
-        </p>
         <div>
             <a href="/todos" class="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition duration-150 ease-in-out">
                 Commencer maintenant
